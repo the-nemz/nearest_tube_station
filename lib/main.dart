@@ -5,6 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:location/location.dart';
 
+import 'api/nearest.dart';
+
+const railStoptypes = 'NaptanMetroStation,NaptanRailStation';
+const busStoptypes = 'NaptanPublicBusCoachTram';
+
 void main() => runApp(const MyApp());
 
 class MyApp extends StatefulWidget {
@@ -17,6 +22,8 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   // late Future<NearestStationResponse> futureNearestStationResponse;
   LocationData? currentLocation;
+  String stopTypes = railStoptypes;
+  int tabIndex = 0;
 
   @override
   void initState() {
@@ -32,7 +39,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     final response = await http.get(Uri.parse(
-        'https://api.tfl.gov.uk/StopPoint/?lat=${currentLocation!.latitude}&lon=${currentLocation!.longitude}&stopTypes=NaptanMetroStation&radius=2000'));
+        'https://api.tfl.gov.uk/StopPoint/?lat=${currentLocation!.latitude}&lon=${currentLocation!.longitude}&stopTypes=$stopTypes&radius=2000'));
 
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
@@ -83,13 +90,34 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  void _onItemTapped(int index) {
+    print(index);
+    print('current $stopTypes');
+    setState(() {
+      if (index == 0 && stopTypes != railStoptypes) {
+        print(railStoptypes);
+        setState(() {
+          stopTypes = railStoptypes;
+          tabIndex = index;
+        });
+      } else if (index == 1 && stopTypes != busStoptypes) {
+        print(busStoptypes);
+        setState(() {
+          stopTypes = busStoptypes;
+          tabIndex = index;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    print('build current $stopTypes');
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Nearest Tube Station'),
-          backgroundColor: Colors.blueGrey,
+          title: const Text('Nearest Station'),
+          backgroundColor: Colors.deepOrange,
         ),
         body: Center(
           child: FutureBuilder<NearestStationResponse?>(
@@ -100,6 +128,23 @@ class _MyAppState extends State<MyApp> {
                     itemCount: snapshot.data!.stations.length,
                     itemBuilder: (_, index) {
                       StationResponse station = snapshot.data!.stations[index];
+
+                      if (index == 0) {
+                        return Card(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              ListTile(
+                                leading: const Icon(Icons.subway),
+                                title: Text(station.name),
+                                subtitle: Text(
+                                    '${(station.distance / 1000).toStringAsFixed(1)} km'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
                       return Card(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -107,7 +152,8 @@ class _MyAppState extends State<MyApp> {
                             ListTile(
                               leading: const Icon(Icons.subway),
                               title: Text(station.name),
-                              subtitle: Text('${(station.distance / 1000).toStringAsFixed(1)} km'),
+                              subtitle: Text(
+                                  '${(station.distance / 1000).toStringAsFixed(1)} km'),
                             ),
                           ],
                         ),
@@ -123,8 +169,8 @@ class _MyAppState extends State<MyApp> {
           ),
         ),
         floatingActionButton: FloatingActionButton(
-            child: Icon(Icons.refresh),
-            backgroundColor: Colors.blueGrey,
+            child: const Icon(Icons.refresh),
+            backgroundColor: Colors.deepOrange,
             onPressed: () {
               getLocationData();
             }),
@@ -139,58 +185,11 @@ class _MyAppState extends State<MyApp> {
               label: 'Bus',
             ),
           ],
+          currentIndex: tabIndex,
+          selectedItemColor: Colors.deepOrange,
+          onTap: _onItemTapped,
         ),
       ),
     );
   }
-}
-
-class NearestStationResponse {
-  final int pageSize;
-  final int total;
-  final int page;
-  final List<StationResponse> stations;
-
-  const NearestStationResponse({
-    required this.pageSize,
-    required this.total,
-    required this.page,
-    required this.stations,
-  });
-
-  factory NearestStationResponse.fromJson(Map<String, dynamic> json) {
-    List<StationResponse> stations = [];
-    for (final s in json['stopPoints']) {
-      stations.add(StationResponse(
-        id: s['id'],
-        name: s['commonName'],
-        distance: s['distance'],
-        latitude: s['lat'],
-        longitude: s['lon'],
-      ));
-    }
-
-    return NearestStationResponse(
-      pageSize: json['pageSize'],
-      total: json['total'],
-      page: json['page'],
-      stations: stations,
-    );
-  }
-}
-
-class StationResponse {
-  final String id;
-  final String name;
-  final double distance;
-  final double latitude;
-  final double longitude;
-
-  const StationResponse({
-    required this.id,
-    required this.name,
-    required this.distance,
-    required this.latitude,
-    required this.longitude,
-  });
 }
