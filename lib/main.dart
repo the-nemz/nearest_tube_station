@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:location/location.dart';
 
 void main() => runApp(const MyApp());
 
@@ -14,18 +15,24 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late Future<NearestStationResponse> futureNearestStationResponse;
+  // late Future<NearestStationResponse> futureNearestStationResponse;
+  LocationData? currentLocation;
 
   @override
   void initState() {
     // TODO: query TfL
     super.initState();
-    futureNearestStationResponse = fetchNearestStations();
+    // futureNearestStationResponse = fetchNearestStations();
+    getLocationData();
   }
 
-  Future<NearestStationResponse> fetchNearestStations() async {
+  Future<NearestStationResponse?> fetchNearestStations() async {
+    if (currentLocation == null) {
+      return null;
+    }
+
     final response = await http.get(Uri.parse(
-        'https://api.tfl.gov.uk/StopPoint/?lat=51.463&lon=-0.114&stopTypes=NaptanMetroStation&radius=2000'));
+        'https://api.tfl.gov.uk/StopPoint/?lat=${currentLocation!.latitude}&lon=${currentLocation!.longitude}&stopTypes=NaptanMetroStation&radius=2000'));
 
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
@@ -38,6 +45,44 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  void getLocationData() async {
+    print('currentLocation');
+    print(currentLocation);
+    Location location = Location();
+    bool _serviceEnabled;
+    PermissionStatus _permissionGranted;
+    LocationData _locationData;
+
+    _serviceEnabled = await location.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await location.requestService();
+      if (!_serviceEnabled) {
+        return;
+      }
+    }
+
+    _permissionGranted = await location.hasPermission();
+    if (_permissionGranted == PermissionStatus.denied) {
+      _permissionGranted = await location.requestPermission();
+      if (_permissionGranted != PermissionStatus.granted) {
+        return;
+      }
+    }
+
+    _locationData = await location.getLocation();
+    print(_locationData);
+    setState(() {
+      currentLocation = _locationData;
+    });
+
+    location.onLocationChanged.listen((LocationData curr) {
+      print(curr);
+      setState(() {
+        currentLocation = curr;
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -47,16 +92,27 @@ class _MyAppState extends State<MyApp> {
           backgroundColor: Colors.blueGrey,
         ),
         body: Center(
-          child: FutureBuilder<NearestStationResponse>(
-            future: futureNearestStationResponse,
+          child: FutureBuilder<NearestStationResponse?>(
+            future: fetchNearestStations(),
             builder: (context, snapshot) {
               if (snapshot.hasData) {
-                // return Text('${snapshot.data!.stations[0].name}');
                 return ListView.builder(
-                  itemCount: snapshot.data!.stations.length,
-                  itemBuilder: (_, index) {
-                  return Text( snapshot.data!.stations[index].name);
-                });
+                    itemCount: snapshot.data!.stations.length,
+                    itemBuilder: (_, index) {
+                      StationResponse station = snapshot.data!.stations[index];
+                      return Card(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            ListTile(
+                              leading: const Icon(Icons.subway),
+                              title: Text(station.name),
+                              subtitle: Text('${(station.distance / 1000).toStringAsFixed(1)} km'),
+                            ),
+                          ],
+                        ),
+                      );
+                    });
               } else if (snapshot.hasError) {
                 return Text('${snapshot.error}');
               }
@@ -66,6 +122,12 @@ class _MyAppState extends State<MyApp> {
             },
           ),
         ),
+        floatingActionButton: FloatingActionButton(
+            child: Icon(Icons.refresh),
+            backgroundColor: Colors.blueGrey,
+            onPressed: () {
+              getLocationData();
+            }),
         bottomNavigationBar: BottomNavigationBar(
           items: const [
             BottomNavigationBarItem(
