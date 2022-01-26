@@ -48,6 +48,7 @@ android {
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        manifestPlaceholders = [gMapsApiKey: "AIzaSyC_fwSoIpnf5SO41v3Vk2D_ezKBl058TF0"]
     }
 
     buildTypes {

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:location/location.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'api/nearest.dart';
 
@@ -23,7 +24,9 @@ class _MyAppState extends State<MyApp> {
   // late Future<NearestStationResponse> futureNearestStationResponse;
   LocationData? currentLocation;
   String stopTypes = railStoptypes;
+  String? currentLeadStationId;
   int tabIndex = 0;
+  late GoogleMapController mapController;
 
   @override
   void initState() {
@@ -44,7 +47,21 @@ class _MyAppState extends State<MyApp> {
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
       // then parse the JSON.
-      return NearestStationResponse.fromJson(jsonDecode(response.body));
+      final data = NearestStationResponse.fromJson(jsonDecode(response.body));
+      print(
+          '${currentLeadStationId != null} ${data.stations.length > 0} ${data.stations[0].id != currentLeadStationId}');
+      if (currentLeadStationId != null &&
+          data.stations.length > 0 &&
+          data.stations[0].id != currentLeadStationId) {
+        mapController.animateCamera(CameraUpdate.newLatLng(
+            (LatLng(data.stations[0].latitude, data.stations[0].longitude))));
+      } else if (currentLeadStationId == null) {
+        setState(() {
+          currentLeadStationId = data.stations[0].id;
+        });
+      }
+
+      return data;
     } else {
       // If the server did not return a 200 OK response,
       // then throw an exception.
@@ -53,8 +70,6 @@ class _MyAppState extends State<MyApp> {
   }
 
   void getLocationData() async {
-    print('currentLocation');
-    print(currentLocation);
     Location location = Location();
     bool _serviceEnabled;
     PermissionStatus _permissionGranted;
@@ -90,18 +105,18 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  void _onMapCreated(GoogleMapController controller) {
+    mapController = controller;
+  }
+
   void _onItemTapped(int index) {
-    print(index);
-    print('current $stopTypes');
     setState(() {
       if (index == 0 && stopTypes != railStoptypes) {
-        print(railStoptypes);
         setState(() {
           stopTypes = railStoptypes;
           tabIndex = index;
         });
       } else if (index == 1 && stopTypes != busStoptypes) {
-        print(busStoptypes);
         setState(() {
           stopTypes = busStoptypes;
           tabIndex = index;
@@ -112,7 +127,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    print('build current $stopTypes');
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
@@ -134,6 +148,32 @@ class _MyAppState extends State<MyApp> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
+                              SizedBox(
+                                height: 150.0,
+                                child: GoogleMap(
+                                  onMapCreated: _onMapCreated,
+                                  myLocationEnabled: true,
+                                  mapToolbarEnabled: false,
+                                  rotateGesturesEnabled: false,
+                                  scrollGesturesEnabled: false,
+                                  zoomControlsEnabled: false,
+                                  zoomGesturesEnabled: false,
+                                  tiltGesturesEnabled: false,
+                                  myLocationButtonEnabled: false,
+                                  initialCameraPosition: CameraPosition(
+                                    target: LatLng(
+                                        station.latitude, station.longitude),
+                                    zoom: 14.0,
+                                  ),
+                                  markers: <Marker>{
+                                    Marker(
+                                      markerId: MarkerId(station.id),
+                                      position: LatLng(
+                                          station.latitude, station.longitude),
+                                    ),
+                                  },
+                                ),
+                              ),
                               ListTile(
                                 leading: const Icon(Icons.subway),
                                 title: Text(station.name),
@@ -142,22 +182,24 @@ class _MyAppState extends State<MyApp> {
                               ),
                             ],
                           ),
+                          elevation: 4.0,
+                        );
+                      } else {
+                        return Card(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              ListTile(
+                                leading: const Icon(Icons.subway),
+                                title: Text(station.name),
+                                subtitle: Text(
+                                    '${(station.distance / 1000).toStringAsFixed(1)} km'),
+                              ),
+                            ],
+                          ),
+                          elevation: 2.0,
                         );
                       }
-
-                      return Card(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            ListTile(
-                              leading: const Icon(Icons.subway),
-                              title: Text(station.name),
-                              subtitle: Text(
-                                  '${(station.distance / 1000).toStringAsFixed(1)} km'),
-                            ),
-                          ],
-                        ),
-                      );
                     });
               } else if (snapshot.hasError) {
                 return Text('${snapshot.error}');
