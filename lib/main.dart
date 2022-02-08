@@ -46,6 +46,8 @@ class _MyAppState extends State<MyApp> {
       return null;
     }
 
+    print(
+        'https://api.tfl.gov.uk/StopPoint/?lat=${currentLocation!.latitude}&lon=${currentLocation!.longitude}&stopTypes=$stopTypes&radius=2000');
     final response = await http.get(Uri.parse(
         'https://api.tfl.gov.uk/StopPoint/?lat=${currentLocation!.latitude}&lon=${currentLocation!.longitude}&stopTypes=$stopTypes&radius=2000'));
 
@@ -150,6 +152,26 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  List<Container> generateLineCards(StationResponse station) {
+    List<Container> lineCards = [];
+    for (final line in station.lines) {
+      lineCards.add(Container(
+        child: Text(
+          line.name,
+          style: TextStyle(
+            color: Colors.white,
+          ),
+        ),
+        padding: const EdgeInsets.all(4.0),
+        decoration: BoxDecoration(
+          // color: Colors.white,
+          color: line.color != null ? line.color! : Colors.blue,
+        ),
+      ));
+    }
+    return lineCards;
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -172,6 +194,7 @@ class _MyAppState extends State<MyApp> {
                         return Card(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: <Widget>[
                               SizedBox(
                                 height: 150.0,
@@ -205,6 +228,10 @@ class _MyAppState extends State<MyApp> {
                                 subtitle: Text(
                                     '${(station.distance / 1000).toStringAsFixed(1)} km'),
                               ),
+                              Wrap(
+                                children: generateLineCards(station),
+                                spacing: 10,
+                              )
                             ],
                           ),
                           elevation: 4.0,
@@ -213,6 +240,7 @@ class _MyAppState extends State<MyApp> {
                         return Card(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: <Widget>[
                               ListTile(
                                 leading: const Icon(Icons.subway),
@@ -220,6 +248,10 @@ class _MyAppState extends State<MyApp> {
                                 subtitle: Text(
                                     '${(station.distance / 1000).toStringAsFixed(1)} km'),
                               ),
+                              Wrap(
+                                children: generateLineCards(station),
+                                spacing: 10,
+                              )
                             ],
                           ),
                           elevation: 2.0,
