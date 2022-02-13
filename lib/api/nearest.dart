@@ -72,6 +72,7 @@ class NearestStationResponse {
         distance: s['distance'],
         latitude: s['lat'],
         longitude: s['lon'],
+        modes: [...s['modes']],
         lines: lines,
       ));
     }
@@ -92,6 +93,7 @@ class StationSummary {
   final double distance;
   final double latitude;
   final double longitude;
+  final List<String> modes;
   final List<LineSummary> lines;
 
   const StationSummary({
@@ -101,6 +103,7 @@ class StationSummary {
     required this.distance,
     required this.latitude,
     required this.longitude,
+    required this.modes,
     required this.lines,
   });
 }

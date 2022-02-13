@@ -3,6 +3,25 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../api/nearest.dart';
 
+const modeToIcon = {
+  'national-rail': Image(
+    image: AssetImage('assets/nationalrail.png'),
+    width: 40,
+  ),
+  'overground': Image(
+    image: AssetImage('assets/overground.png'),
+    width: 40,
+  ),
+  'tube': Image(
+    image: AssetImage('assets/underground.png'),
+    width: 40,
+  ),
+  'bus': Image(
+    image: AssetImage('assets/buses.png'),
+    width: 40,
+  ),
+};
+
 class StationCard extends StatelessWidget {
   StationCard({
     Key? key,
@@ -39,6 +58,11 @@ class StationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Widget icon = modeToIcon[station.lines.isNotEmpty
+            ? station.lines[0].mode
+            : station.modes[0]] ??
+        const Icon(Icons.directions_bus_filled_outlined, size: 40);
+
     if (index == 0) {
       return Card(
         child: Column(
@@ -70,7 +94,7 @@ class StationCard extends StatelessWidget {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.subway),
+              leading: icon,
               title: Text(station.name),
               subtitle:
                   Text('${(station.distance / 1000).toStringAsFixed(1)} km'),
@@ -90,7 +114,7 @@ class StationCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             ListTile(
-              leading: const Icon(Icons.subway),
+              leading: icon,
               title: Text(station.name),
               subtitle:
                   Text('${(station.distance / 1000).toStringAsFixed(1)} km'),
