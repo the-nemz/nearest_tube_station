@@ -17,6 +17,11 @@ const lineToColor = {
   'london-overground': Color(0xFFE87722),
 };
 
+// DLR #00AFAD
+// tflrail #0019A8
+// tram #00BD19
+// londontrams #00BD19
+
 const stopTypeToMode = {
   'NaptanRailStation': ['national-rail', 'overground'],
   'NaptanMetroStation': ['tube'],
@@ -27,7 +32,7 @@ class NearestStationResponse {
   final int pageSize;
   final int total;
   final int page;
-  final List<StationResponse> stations;
+  final List<StationSummary> stations;
 
   const NearestStationResponse({
     required this.pageSize,
@@ -37,7 +42,7 @@ class NearestStationResponse {
   });
 
   factory NearestStationResponse.fromJson(Map<String, dynamic> json) {
-    List<StationResponse> stations = [];
+    List<StationSummary> stations = [];
     for (final s in json['stopPoints']) {
       Map<String, String> validLineIdsToMode = {};
       final stopTypes = stopTypeToMode[s['stopType']];
@@ -49,10 +54,10 @@ class NearestStationResponse {
         }
       }
 
-      List<LineResponse> lines = [];
+      List<LineSummary> lines = [];
       for (final l in s['lines']) {
         if (validLineIdsToMode.containsKey(l['id'])) {
-          lines.add(LineResponse(
+          lines.add(LineSummary(
             id: l['id'],
             name: l['name'],
             mode: validLineIdsToMode[l['id']]!,
@@ -60,7 +65,7 @@ class NearestStationResponse {
         }
       }
 
-      stations.add(StationResponse(
+      stations.add(StationSummary(
         id: s['id'],
         name: s['commonName'],
         stopType: s['stopType'],
@@ -80,16 +85,16 @@ class NearestStationResponse {
   }
 }
 
-class StationResponse {
+class StationSummary {
   final String id;
   final String name;
   final String stopType;
   final double distance;
   final double latitude;
   final double longitude;
-  final List<LineResponse> lines;
+  final List<LineSummary> lines;
 
-  const StationResponse({
+  const StationSummary({
     required this.id,
     required this.name,
     required this.stopType,
@@ -100,13 +105,13 @@ class StationResponse {
   });
 }
 
-class LineResponse {
+class LineSummary {
   final String id;
   final String name;
   final String mode;
   final Color? color;
 
-  LineResponse({
+  LineSummary({
     required this.id,
     required this.name,
     required this.mode,

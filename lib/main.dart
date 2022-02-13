@@ -3,10 +3,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
 import 'api/nearest.dart';
+import 'widgets/station_card.dart';
 
 const railStoptypes = 'NaptanMetroStation,NaptanRailStation';
 const busStoptypes = 'NaptanPublicBusCoachTram';
@@ -21,17 +21,15 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  // late Future<NearestStationResponse> futureNearestStationResponse;
   Position? currentLocation;
   String stopTypes = railStoptypes;
-  String? currentLeadStationId;
+  NearestStationResponse? nearestData;
+  String nearestQuery = '';
   int tabIndex = 0;
-  late GoogleMapController mapController;
 
   @override
   void initState() {
     super.initState();
-    // futureNearestStationResponse = fetchNearestStations();
     determinePosition();
   }
 
@@ -41,38 +39,40 @@ class _MyAppState extends State<MyApp> {
     determinePosition();
   }
 
-  Future<NearestStationResponse?> fetchNearestStations() async {
-    if (currentLocation == null) {
-      return null;
-    }
+  void fetchNearestStations(String query) async {
+    setState(() {
+      nearestData = null;
+    });
 
-    print(
-        'https://api.tfl.gov.uk/StopPoint/?lat=${currentLocation!.latitude}&lon=${currentLocation!.longitude}&stopTypes=$stopTypes&radius=2000');
-    final response = await http.get(Uri.parse(
-        'https://api.tfl.gov.uk/StopPoint/?lat=${currentLocation!.latitude}&lon=${currentLocation!.longitude}&stopTypes=$stopTypes&radius=2000'));
+    print(query);
+    final response = await http.get(Uri.parse(query));
 
     if (response.statusCode == 200) {
       // If the server did return a 200 OK response,
       // then parse the JSON.
       final data = NearestStationResponse.fromJson(jsonDecode(response.body));
-      print(
-          '${currentLeadStationId != null} ${data.stations.length > 0} ${data.stations[0].id != currentLeadStationId}');
-      if (currentLeadStationId != null &&
-          data.stations.length > 0 &&
-          data.stations[0].id != currentLeadStationId) {
-        mapController.animateCamera(CameraUpdate.newLatLng(
-            (LatLng(data.stations[0].latitude, data.stations[0].longitude))));
-      } else if (currentLeadStationId == null) {
-        setState(() {
-          currentLeadStationId = data.stations[0].id;
-        });
-      }
 
-      return data;
+      setState(() {
+        nearestData = data;
+        nearestQuery = query;
+      });
     } else {
       // If the server did not return a 200 OK response,
       // then throw an exception.
       throw Exception('Failed to load album');
+    }
+  }
+
+  getNearestStations() async {
+    if (currentLocation == null) {
+      return;
+    }
+
+    String query =
+        'https://api.tfl.gov.uk/StopPoint/?lat=${currentLocation!.latitude}&lon=${currentLocation!.longitude}&stopTypes=$stopTypes&radius=2000';
+
+    if (nearestQuery != query || nearestData == null) {
+      fetchNearestStations(query);
     }
   }
 
@@ -132,10 +132,6 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void _onMapCreated(GoogleMapController controller) {
-    mapController = controller;
-  }
-
   void _onItemTapped(int index) {
     setState(() {
       if (index == 0 && stopTypes != railStoptypes) {
@@ -152,28 +148,10 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  List<Container> generateLineCards(StationResponse station) {
-    List<Container> lineCards = [];
-    for (final line in station.lines) {
-      lineCards.add(Container(
-        child: Text(
-          line.name,
-          style: TextStyle(
-            color: Colors.white,
-          ),
-        ),
-        padding: const EdgeInsets.all(4.0),
-        decoration: BoxDecoration(
-          // color: Colors.white,
-          color: line.color != null ? line.color! : Colors.blue,
-        ),
-      ));
-    }
-    return lineCards;
-  }
-
   @override
   Widget build(BuildContext context) {
+    getNearestStations();
+
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
@@ -181,91 +159,18 @@ class _MyAppState extends State<MyApp> {
           backgroundColor: Colors.deepOrange,
         ),
         body: Center(
-          child: FutureBuilder<NearestStationResponse?>(
-            future: fetchNearestStations(),
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                return ListView.builder(
-                    itemCount: snapshot.data!.stations.length,
-                    itemBuilder: (_, index) {
-                      StationResponse station = snapshot.data!.stations[index];
-
-                      if (index == 0) {
-                        return Card(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: <Widget>[
-                              SizedBox(
-                                height: 150.0,
-                                child: GoogleMap(
-                                  onMapCreated: _onMapCreated,
-                                  myLocationEnabled: true,
-                                  mapToolbarEnabled: false,
-                                  rotateGesturesEnabled: false,
-                                  scrollGesturesEnabled: false,
-                                  zoomControlsEnabled: false,
-                                  zoomGesturesEnabled: false,
-                                  tiltGesturesEnabled: false,
-                                  myLocationButtonEnabled: false,
-                                  initialCameraPosition: CameraPosition(
-                                    target: LatLng(
-                                        station.latitude, station.longitude),
-                                    zoom: 14.0,
-                                  ),
-                                  markers: <Marker>{
-                                    Marker(
-                                      markerId: MarkerId(station.id),
-                                      position: LatLng(
-                                          station.latitude, station.longitude),
-                                    ),
-                                  },
-                                ),
-                              ),
-                              ListTile(
-                                leading: const Icon(Icons.subway),
-                                title: Text(station.name),
-                                subtitle: Text(
-                                    '${(station.distance / 1000).toStringAsFixed(1)} km'),
-                              ),
-                              Wrap(
-                                children: generateLineCards(station),
-                                spacing: 10,
-                              )
-                            ],
-                          ),
-                          elevation: 4.0,
-                        );
-                      } else {
-                        return Card(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: <Widget>[
-                              ListTile(
-                                leading: const Icon(Icons.subway),
-                                title: Text(station.name),
-                                subtitle: Text(
-                                    '${(station.distance / 1000).toStringAsFixed(1)} km'),
-                              ),
-                              Wrap(
-                                children: generateLineCards(station),
-                                spacing: 10,
-                              )
-                            ],
-                          ),
-                          elevation: 2.0,
-                        );
-                      }
-                    });
-              } else if (snapshot.hasError) {
-                return Text('${snapshot.error}');
-              }
-
-              // By default, show a loading spinner.
-              return const CircularProgressIndicator();
-            },
-          ),
+          child: nearestData != null
+              ? ListView.builder(
+                  itemCount:
+                      nearestData != null ? nearestData!.stations.length : 0,
+                  itemBuilder: (_, index) {
+                    return StationCard(
+                      station: nearestData!.stations[index],
+                      index: index,
+                    );
+                  },
+                )
+              : const CircularProgressIndicator(),
         ),
         floatingActionButton: FloatingActionButton(
             child: const Icon(Icons.refresh),
