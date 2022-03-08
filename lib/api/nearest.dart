@@ -47,7 +47,9 @@ class NearestStationResponse {
       Map<String, String> validLineIdsToMode = {};
       final stopTypes = stopTypeToMode[s['stopType']];
       for (final lg in s['lineModeGroups']) {
-        if (stopTypes != null && stopTypes.contains(lg['modeName']) && lg.containsKey('lineIdentifier')) {
+        if (stopTypes != null &&
+            stopTypes.contains(lg['modeName']) &&
+            lg.containsKey('lineIdentifier')) {
           for (final validLineId in lg['lineIdentifier']) {
             validLineIdsToMode[validLineId] = lg['modeName'];
           }

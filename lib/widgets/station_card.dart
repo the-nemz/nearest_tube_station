@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -39,19 +41,23 @@ class StationCard extends StatelessWidget {
   List<Container> generateLineCards(StationSummary station) {
     List<Container> lineCards = [];
     for (final line in station.lines) {
-      lineCards.add(Container(
-        child: Text(
-          line.name,
-          style: const TextStyle(
-            color: Colors.white,
+      lineCards.add(
+        Container(
+          child: Text(
+            line.name,
+            style: const TextStyle(
+              color: Colors.white,
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
+          decoration: BoxDecoration(
+            color: line.color != null ? line.color! : Colors.blue,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(4),
+            ),
           ),
         ),
-        padding: const EdgeInsets.all(4.0),
-        decoration: BoxDecoration(
-          // color: Colors.white,
-          color: line.color != null ? line.color! : Colors.blue,
-        ),
-      ));
+      );
     }
     return lineCards;
   }
@@ -63,70 +69,78 @@ class StationCard extends StatelessWidget {
             : station.modes[0]] ??
         const Icon(Icons.directions_bus_filled_outlined, size: 40);
 
+    List<Widget> children = [];
     if (index == 0) {
-      return Card(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            SizedBox(
-              height: 150.0,
-              child: GoogleMap(
-                onMapCreated: _onMapCreated,
-                myLocationEnabled: true,
-                mapToolbarEnabled: false,
-                rotateGesturesEnabled: false,
-                scrollGesturesEnabled: false,
-                zoomControlsEnabled: false,
-                zoomGesturesEnabled: false,
-                tiltGesturesEnabled: false,
-                myLocationButtonEnabled: false,
-                initialCameraPosition: CameraPosition(
-                  target: LatLng(station.latitude, station.longitude),
-                  zoom: 14.0,
-                ),
-                markers: <Marker>{
-                  Marker(
-                    markerId: MarkerId(station.id),
-                    position: LatLng(station.latitude, station.longitude),
-                  ),
-                },
+      children = [
+        SizedBox(
+          height: 150,
+          child: GoogleMap(
+            onMapCreated: _onMapCreated,
+            myLocationEnabled: true,
+            mapToolbarEnabled: false,
+            rotateGesturesEnabled: false,
+            scrollGesturesEnabled: false,
+            zoomControlsEnabled: false,
+            zoomGesturesEnabled: false,
+            tiltGesturesEnabled: false,
+            myLocationButtonEnabled: false,
+            initialCameraPosition: CameraPosition(
+              target: LatLng(station.latitude, station.longitude),
+              zoom: 14,
+            ),
+            markers: <Marker>{
+              Marker(
+                markerId: MarkerId(station.id),
+                position: LatLng(station.latitude, station.longitude),
               ),
-            ),
-            ListTile(
-              leading: icon,
-              title: Text(station.name),
-              subtitle:
-                  Text('${(station.distance / 1000).toStringAsFixed(1)} km'),
-            ),
-            Wrap(
-              children: generateLineCards(station),
-              spacing: 10,
-            )
-          ],
+            },
+          ),
         ),
-        elevation: 4.0,
-      );
+        ListTile(
+          leading: icon,
+          title: Text(station.name),
+          subtitle: Text('${(station.distance / 1000).toStringAsFixed(1)} km'),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          child: Wrap(
+            children: generateLineCards(station),
+            spacing: 2,
+          ),
+        )
+      ];
     } else {
-      return Card(
+      children = [
+        ListTile(
+          leading: icon,
+          title: Text(station.name),
+          subtitle: Text('${(station.distance / 1000).toStringAsFixed(1)} km'),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          child: Wrap(
+            children: generateLineCards(station),
+            spacing: 2,
+          ),
+        )
+      ];
+    }
+
+    return Card(
+      margin: EdgeInsets.fromLTRB(8, index == 0 ? 0 : 16, 8, 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            ListTile(
-              leading: icon,
-              title: Text(station.name),
-              subtitle:
-                  Text('${(station.distance / 1000).toStringAsFixed(1)} km'),
-            ),
-            Wrap(
-              children: generateLineCards(station),
-              spacing: 10,
-            )
-          ],
+          children: children,
         ),
-        elevation: 2.0,
-      );
-    }
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      elevation: max(8 / (index + 1), 1),
+      // elevation: max(8.0 - (2 * index), 1),
+    );
   }
 }

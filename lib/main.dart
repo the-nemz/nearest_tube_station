@@ -26,11 +26,21 @@ class _MyAppState extends State<MyApp> {
   NearestStationResponse? nearestData;
   String nearestQuery = '';
   int tabIndex = 0;
+  int numShown = 0;
 
   @override
   void initState() {
     super.initState();
     determinePosition();
+
+    const period = Duration(milliseconds: 250);
+    Timer.periodic(period, (Timer t) {
+      if (numShown < (nearestData?.stations.length ?? 0)) {
+        setState(() {
+          numShown = numShown + 1;
+        });
+      }
+    });
   }
 
   @override
@@ -42,6 +52,7 @@ class _MyAppState extends State<MyApp> {
   void fetchNearestStations(String query) async {
     setState(() {
       nearestData = null;
+      numShown = 0;
     });
 
     print(query);
@@ -154,22 +165,20 @@ class _MyAppState extends State<MyApp> {
 
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Nearest Station'),
-          backgroundColor: Colors.deepOrange,
-        ),
         body: Center(
           child: nearestData != null
               ? ListView.builder(
-                  itemCount:
-                      nearestData != null ? nearestData!.stations.length : 0,
+                  itemCount: nearestData?.stations.length ?? 0,
                   itemBuilder: (_, index) {
-                    return StationCard(
-                      station: nearestData!.stations[index],
-                      index: index,
+                    return AnimatedOpacity(
+                      opacity: index < numShown ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 500),
+                      child: StationCard(
+                        station: nearestData!.stations[index],
+                        index: index,
+                      ),
                     );
-                  },
-                )
+                  })
               : const CircularProgressIndicator(),
         ),
         floatingActionButton: FloatingActionButton(
