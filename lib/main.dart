@@ -12,8 +12,6 @@ import 'widgets/station_page.dart';
 const railStoptypes = 'NaptanMetroStation,NaptanRailStation';
 const busStoptypes = 'NaptanPublicBusCoachTram';
 
-// void main() => runApp(const MyApp());
-
 void main() {
   runApp(const MaterialApp(
     title: 'Tube Near Me',
@@ -80,7 +78,7 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  getNearestStations() async {
+  getNearestStations({bool forceReload = false}) async {
     if (currentLocation == null) {
       return;
     }
@@ -88,7 +86,7 @@ class _MyAppState extends State<MyApp> {
     String query =
         'https://api.tfl.gov.uk/StopPoint/?lat=${currentLocation!.latitude}&lon=${currentLocation!.longitude}&stopTypes=$stopTypes&radius=2000';
 
-    if (nearestQuery != query || nearestData == null) {
+    if (nearestQuery != query || nearestData == null || forceReload) {
       fetchNearestStations(query);
     }
   }
@@ -203,7 +201,7 @@ class _MyAppState extends State<MyApp> {
             child: const Icon(Icons.refresh),
             backgroundColor: Colors.deepOrange,
             onPressed: () async {
-              determinePosition();
+              await getNearestStations(forceReload: true);
             }),
         bottomNavigationBar: BottomNavigationBar(
           items: const [
