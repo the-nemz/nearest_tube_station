@@ -207,6 +207,7 @@ class _StationCardState extends State<StationCard> {
           child: Wrap(
             children: generateLineCards(widget.station),
             spacing: 2,
+            runSpacing: 2,
           ),
         )
       ];
@@ -222,7 +223,9 @@ class _StationCardState extends State<StationCard> {
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
           child: Wrap(
             children: generateLineCards(widget.station),
+            verticalDirection: VerticalDirection.up,
             spacing: 2,
+            runSpacing: 2,
           ),
         )
       ];
