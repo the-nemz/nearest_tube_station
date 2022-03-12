@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
+import '../util.dart';
 import '../api/arrivals.dart';
 import '../api/nearest.dart';
 
@@ -50,30 +51,6 @@ class _StationCardState extends State<StationCard> {
     // not yet needed
   }
 
-  List<Container> generateLineCards(StationSummary station) {
-    List<Container> lineCards = [];
-    for (final line in station.lines) {
-      lineCards.add(
-        Container(
-          child: Text(
-            line.name,
-            style: const TextStyle(
-              color: Colors.white,
-            ),
-          ),
-          padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
-          decoration: BoxDecoration(
-            color: line.color != null ? line.color! : Colors.blue,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(4),
-            ),
-          ),
-        ),
-      );
-    }
-    return lineCards;
-  }
-
   void fetchArrivals(String query) async {
     setState(() {
       arrivalsData = null;
@@ -103,6 +80,62 @@ class _StationCardState extends State<StationCard> {
     if (arrivalsQuery != query || arrivalsData == null) {
       fetchArrivals(query);
     }
+  }
+
+  List<Container> generateLineCards(StationSummary station) {
+    List<Container> lineCards = [];
+    for (final line in station.lines) {
+      lineCards.add(
+        Container(
+          child: Text(
+            line.name,
+            style: const TextStyle(
+              color: Colors.white,
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
+          decoration: BoxDecoration(
+            color: line.color,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(4),
+            ),
+          ),
+        ),
+      );
+    }
+    return lineCards;
+  }
+
+  Widget renderArrival(Arrival arrival) {
+    int minutes = (arrival.timeToStation / 60.0).round();
+    return Row(
+      children: [
+        Container(
+          width: 24,
+          child: Text(
+            arrival.lineName[0],
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
+          decoration: BoxDecoration(
+            color: getLineColor(arrival.lineId, arrival.modeName),
+            borderRadius: const BorderRadius.all(Radius.circular(4)),
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+            child: Text(arrival.destinationId == widget.station.id
+                ? 'Outbound'
+                : arrival.towards),
+          ),
+        ),
+        Text(minutes == 0 ? 'Now' : '$minutes min'),
+      ],
+    );
   }
 
   @override
@@ -148,20 +181,25 @@ class _StationCardState extends State<StationCard> {
           subtitle:
               Text('${(widget.station.distance / 1000).toStringAsFixed(1)} km'),
         ),
-        SizedBox(
-          height: 100,
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 1000, minHeight: 0),
           child: arrivalsData != null
-              ? ListView.builder(
-                  itemCount: arrivalsData?.arrivals
-                          .where((a) => a.timeToStation < 1200)
-                          .length ??
-                      0,
+              ? ListView.separated(
+                  // to go back to listing arrivals over the next 20 mins
+                  // itemCount: arrivalsData?.arrivals
+                  //         .where((a) => a.timeToStation < 1200)
+                  //         .length ??
+                  //     0,
+                  itemCount: min(arrivalsData?.arrivals.length ?? 0, 5),
                   itemBuilder: (_, index) {
                     Arrival arrival = arrivalsData!.arrivals[index];
-
-                    return Text(
-                        '${arrival.destinationId == widget.station.id ? 'Outbound' : arrival.towards} ${arrival.timeToStation}');
-                  })
+                    return renderArrival(arrival);
+                  },
+                  separatorBuilder: (_, index) => const Divider(),
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  shrinkWrap: true,
+                )
               : const CircularProgressIndicator(),
         ),
         Padding(
@@ -204,7 +242,6 @@ class _StationCardState extends State<StationCard> {
         borderRadius: BorderRadius.circular(16),
       ),
       elevation: max(8 / (widget.index + 1), 1),
-      // elevation: max(8.0 - (2 * index), 1),
     );
   }
 }
