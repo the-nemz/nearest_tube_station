@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 
+import '../api/arrivals.dart';
 import '../api/nearest.dart';
 
 const modeToIcon = {
@@ -24,15 +27,24 @@ const modeToIcon = {
   ),
 };
 
-class StationCard extends StatelessWidget {
-  StationCard({
-    Key? key,
-    required this.station,
-    required this.index,
-  }) : super(key: key);
-
+class StationCard extends StatefulWidget {
   final StationSummary station;
   final int index;
+
+  const StationCard(this.station, this.index);
+
+  @override
+  _StationCardState createState() => _StationCardState();
+}
+
+class _StationCardState extends State<StationCard> {
+  ArrivalsResponse? arrivalsData;
+  String arrivalsQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   void _onMapCreated(GoogleMapController controller) {
     // not yet needed
@@ -62,15 +74,48 @@ class StationCard extends StatelessWidget {
     return lineCards;
   }
 
+  void fetchArrivals(String query) async {
+    setState(() {
+      arrivalsData = null;
+    });
+
+    print('Fetching arrivals: $query');
+    final response = await http.get(Uri.parse(query));
+
+    if (response.statusCode == 200) {
+      final data = ArrivalsResponse.fromJson(jsonDecode(response.body));
+
+      setState(() {
+        arrivalsData = data;
+        arrivalsQuery = query;
+      });
+    } else {
+      // TODO: handle this so as to not send tons of repeated erroring requests
+      print('${response.statusCode} - ${response.reasonPhrase}');
+      throw Exception('Failed to load nearest stations');
+    }
+  }
+
+  getArrivals() async {
+    String query =
+        'https://api.tfl.gov.uk/StopPoint/${widget.station.id}/arrivals';
+
+    if (arrivalsQuery != query || arrivalsData == null) {
+      fetchArrivals(query);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    Widget icon = modeToIcon[station.lines.isNotEmpty
-            ? station.lines[0].mode
-            : station.modes[0]] ??
+    Widget icon = modeToIcon[widget.station.lines.isNotEmpty
+            ? widget.station.lines[0].mode
+            : widget.station.modes[0]] ??
         const Icon(Icons.directions_bus_filled_outlined, size: 40);
-
     List<Widget> children = [];
-    if (index == 0) {
+
+    if (widget.index == 0) {
+      getArrivals();
+
       children = [
         SizedBox(
           height: 150,
@@ -85,26 +130,44 @@ class StationCard extends StatelessWidget {
             tiltGesturesEnabled: false,
             myLocationButtonEnabled: false,
             initialCameraPosition: CameraPosition(
-              target: LatLng(station.latitude, station.longitude),
+              target: LatLng(widget.station.latitude, widget.station.longitude),
               zoom: 14,
             ),
             markers: <Marker>{
               Marker(
-                markerId: MarkerId(station.id),
-                position: LatLng(station.latitude, station.longitude),
+                markerId: MarkerId(widget.station.id),
+                position:
+                    LatLng(widget.station.latitude, widget.station.longitude),
               ),
             },
           ),
         ),
         ListTile(
           leading: icon,
-          title: Text(station.name),
-          subtitle: Text('${(station.distance / 1000).toStringAsFixed(1)} km'),
+          title: Text(widget.station.name),
+          subtitle:
+              Text('${(widget.station.distance / 1000).toStringAsFixed(1)} km'),
+        ),
+        SizedBox(
+          height: 100,
+          child: arrivalsData != null
+              ? ListView.builder(
+                  itemCount: arrivalsData?.arrivals
+                          .where((a) => a.timeToStation < 1200)
+                          .length ??
+                      0,
+                  itemBuilder: (_, index) {
+                    Arrival arrival = arrivalsData!.arrivals[index];
+
+                    return Text(
+                        '${arrival.destinationId == widget.station.id ? 'Outbound' : arrival.towards} ${arrival.timeToStation}');
+                  })
+              : const CircularProgressIndicator(),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
           child: Wrap(
-            children: generateLineCards(station),
+            children: generateLineCards(widget.station),
             spacing: 2,
           ),
         )
@@ -113,13 +176,14 @@ class StationCard extends StatelessWidget {
       children = [
         ListTile(
           leading: icon,
-          title: Text(station.name),
-          subtitle: Text('${(station.distance / 1000).toStringAsFixed(1)} km'),
+          title: Text(widget.station.name),
+          subtitle:
+              Text('${(widget.station.distance / 1000).toStringAsFixed(1)} km'),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
           child: Wrap(
-            children: generateLineCards(station),
+            children: generateLineCards(widget.station),
             spacing: 2,
           ),
         )
@@ -127,7 +191,7 @@ class StationCard extends StatelessWidget {
     }
 
     return Card(
-      margin: EdgeInsets.fromLTRB(8, index == 0 ? 0 : 16, 8, 8),
+      margin: EdgeInsets.fromLTRB(8, widget.index == 0 ? 0 : 16, 8, 8),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Column(
@@ -139,7 +203,7 @@ class StationCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      elevation: max(8 / (index + 1), 1),
+      elevation: max(8 / (widget.index + 1), 1),
       // elevation: max(8.0 - (2 * index), 1),
     );
   }

@@ -55,12 +55,10 @@ class _MyAppState extends State<MyApp> {
       numShown = 0;
     });
 
-    print(query);
+    print('Fetching nearest stations: $query');
     final response = await http.get(Uri.parse(query));
 
     if (response.statusCode == 200) {
-      // If the server did return a 200 OK response,
-      // then parse the JSON.
       final data = NearestStationResponse.fromJson(jsonDecode(response.body));
 
       setState(() {
@@ -68,9 +66,9 @@ class _MyAppState extends State<MyApp> {
         nearestQuery = query;
       });
     } else {
-      // If the server did not return a 200 OK response,
-      // then throw an exception.
-      throw Exception('Failed to load album');
+      // TODO: handle this so as to not send tons of repeated erroring requests
+      print('${response.statusCode} - ${response.reasonPhrase}');
+      throw Exception('Failed to load nearest stations');
     }
   }
 
@@ -128,17 +126,22 @@ class _MyAppState extends State<MyApp> {
     // return await Geolocator.getCurrentPosition();
 
     Position pos = await Geolocator.getCurrentPosition();
-    if (pos != null) {
-      setState(() {
-        currentLocation = pos;
-      });
-    }
+    setState(() {
+      currentLocation = pos;
+    });
 
     Geolocator.getPositionStream().listen((Position? position) {
       if (position != null) {
-        setState(() {
-          currentLocation = position;
-        });
+        double distance = Geolocator.distanceBetween(
+            position.latitude,
+            position.longitude,
+            currentLocation?.latitude ?? 0,
+            currentLocation?.longitude ?? 0);
+        if (distance > 100) {
+          setState(() {
+            currentLocation = position;
+          });
+        }
       }
     });
   }
@@ -173,10 +176,7 @@ class _MyAppState extends State<MyApp> {
                     return AnimatedOpacity(
                       opacity: index < numShown ? 1.0 : 0.0,
                       duration: const Duration(milliseconds: 500),
-                      child: StationCard(
-                        station: nearestData!.stations[index],
-                        index: index,
-                      ),
+                      child: StationCard(nearestData!.stations[index], index),
                     );
                   })
               : const CircularProgressIndicator(),
