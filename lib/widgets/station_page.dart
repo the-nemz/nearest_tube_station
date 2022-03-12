@@ -48,21 +48,24 @@ class _StationPageState extends State<StationPage> {
     });
   }
 
-  List<Container> generateLineCards(StationSummary station) {
-    List<Container> lineCards = [];
+  List<Material> generateLineCards(StationSummary station) {
+    List<Material> lineCards = [];
     for (final line in station.lines) {
       lineCards.add(
-        Container(
-          child: Text(
-            line.name,
-            style: const TextStyle(
-              color: Colors.white,
+        Material(
+          type: MaterialType.transparency,
+          child: Container(
+            child: Text(
+              line.name,
+              style: const TextStyle(
+                color: Colors.white,
+              ),
             ),
+            padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
+            decoration: BoxDecoration(
+                color: line.color,
+                borderRadius: const BorderRadius.all(Radius.circular(4))),
           ),
-          padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
-          decoration: BoxDecoration(
-              color: line.color,
-              borderRadius: const BorderRadius.all(Radius.circular(4))),
         ),
       );
     }
@@ -77,46 +80,63 @@ class _StationPageState extends State<StationPage> {
         const Icon(Icons.directions_bus_filled_outlined, size: 40);
 
     List<Widget> children = [
-      SizedBox(
-        height: 300,
-        child: GoogleMap(
-          onMapCreated: _onMapCreated,
-          myLocationEnabled: true,
-          mapToolbarEnabled: false,
-          rotateGesturesEnabled: false,
-          scrollGesturesEnabled: false,
-          zoomControlsEnabled: false,
-          zoomGesturesEnabled: false,
-          tiltGesturesEnabled: false,
-          myLocationButtonEnabled: false,
-          initialCameraPosition: CameraPosition(
-            target: LatLng(widget.station.latitude, widget.station.longitude),
-            zoom: 14,
-          ),
-          markers: <Marker>{
-            Marker(
-              markerId: MarkerId(widget.station.id),
-              position:
-                  LatLng(widget.station.latitude, widget.station.longitude),
+      Hero(
+        tag: '${widget.station.id}-map',
+        child: SizedBox(
+          height: 300,
+          child: GoogleMap(
+            onMapCreated: _onMapCreated,
+            myLocationEnabled: true,
+            mapToolbarEnabled: false,
+            rotateGesturesEnabled: false,
+            scrollGesturesEnabled: false,
+            zoomControlsEnabled: false,
+            zoomGesturesEnabled: false,
+            tiltGesturesEnabled: false,
+            myLocationButtonEnabled: false,
+            initialCameraPosition: CameraPosition(
+              target: LatLng(widget.station.latitude, widget.station.longitude),
+              zoom: 14,
             ),
-          },
+            markers: <Marker>{
+              Marker(
+                markerId: MarkerId(widget.station.id),
+                position:
+                    LatLng(widget.station.latitude, widget.station.longitude),
+              ),
+            },
+          ),
         ),
       ),
-      ListTile(
-        leading: icon,
-        title: Text(widget.station.name),
-        subtitle:
-            Text('${(widget.station.distance / 1000).toStringAsFixed(1)} km'),
-      ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Wrap(
-          children: generateLineCards(widget.station),
-          spacing: 2,
-          runSpacing: 2,
+      Hero(
+        tag: widget.station.id,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Material(
+              type: MaterialType.transparency,
+              child: ListTile(
+                leading: icon,
+                title: Text(widget.station.name),
+                subtitle: Text(
+                    '${(widget.station.distance / 1000).toStringAsFixed(1)} km'),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+              child: Wrap(
+                children: generateLineCards(widget.station),
+                spacing: 2,
+                runSpacing: 2,
+              ),
+            ),
+          ],
         ),
       ),
-      ArrivalsList(widget.station),
+      Container(
+        margin: const EdgeInsets.only(top: 16.0),
+        child: ArrivalsList(widget.station),
+      ),
     ];
 
     return Scaffold(
