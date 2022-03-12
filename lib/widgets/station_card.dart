@@ -41,6 +41,7 @@ class StationCard extends StatefulWidget {
 class _StationCardState extends State<StationCard> {
   ArrivalsResponse? arrivalsData;
   String arrivalsQuery = '';
+  GoogleMapController? mapController;
 
   @override
   void initState() {
@@ -48,7 +49,11 @@ class _StationCardState extends State<StationCard> {
   }
 
   void _onMapCreated(GoogleMapController controller) {
-    // not yet needed
+    setState(() {
+      mapController = controller;
+      controller.setMapStyle(
+          '[{"featureType": "poi", "stylers": [{"visibility": "off"}]}]');
+    });
   }
 
   void fetchArrivals(String query) async {
@@ -64,10 +69,8 @@ class _StationCardState extends State<StationCard> {
 
       setState(() {
         arrivalsData = data;
-        arrivalsQuery = query;
       });
     } else {
-      // TODO: handle this so as to not send tons of repeated erroring requests
       print('${response.statusCode} - ${response.reasonPhrase}');
       throw Exception('Failed to load nearest stations');
     }
@@ -77,8 +80,11 @@ class _StationCardState extends State<StationCard> {
     String query =
         'https://api.tfl.gov.uk/StopPoint/${widget.station.id}/arrivals';
 
-    if (arrivalsQuery != query || arrivalsData == null) {
+    if (arrivalsQuery != query) {
       fetchArrivals(query);
+      setState(() {
+        arrivalsQuery = query;
+      });
     }
   }
 
