@@ -11,7 +11,7 @@ class ArrivalsResponse {
       arrivals.add(Arrival(
         id: a['id'],
         platformName: a['platformName'],
-        destinationId: a['destinationNaptanId'],
+        destinationId: a['destinationNaptanId'] ?? '',
         towards: a['towards'],
         timeToStation: a['timeToStation'],
         lineId: a['lineId'],

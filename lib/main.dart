@@ -7,11 +7,19 @@ import 'package:http/http.dart' as http;
 
 import 'api/nearest.dart';
 import 'widgets/station_card.dart';
+import 'widgets/station_page.dart';
 
 const railStoptypes = 'NaptanMetroStation,NaptanRailStation';
 const busStoptypes = 'NaptanPublicBusCoachTram';
 
-void main() => runApp(const MyApp());
+// void main() => runApp(const MyApp());
+
+void main() {
+  runApp(const MaterialApp(
+    title: 'Tube Near Me',
+    home: MyApp(),
+  ));
+}
 
 class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -176,7 +184,17 @@ class _MyAppState extends State<MyApp> {
                     return AnimatedOpacity(
                       opacity: index < numShown ? 1.0 : 0.0,
                       duration: const Duration(milliseconds: 500),
-                      child: StationCard(nearestData!.stations[index], index),
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    StationPage(nearestData!.stations[index])),
+                          );
+                        },
+                        child: StationCard(nearestData!.stations[index], index),
+                      ),
                     );
                   })
               : const CircularProgressIndicator(),
