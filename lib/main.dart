@@ -11,7 +11,6 @@ import 'widgets/station_page.dart';
 
 const railStoptypes = 'NaptanMetroStation,NaptanRailStation';
 const busStoptypes = 'NaptanPublicBusCoachTram';
-
 void main() {
   runApp(const MaterialApp(
     title: 'Tube Near Me',
@@ -181,6 +180,7 @@ class _MyAppState extends State<MyApp> {
                   itemBuilder: (_, index) {
                     return AnimatedOpacity(
                       opacity: index < numShown ? 1.0 : 0.0,
+                      curve: Curves.easeInOut,
                       duration: const Duration(milliseconds: 500),
                       child: GestureDetector(
                         onTap: () {
@@ -198,12 +198,16 @@ class _MyAppState extends State<MyApp> {
               : const CircularProgressIndicator(),
         ),
         floatingActionButton: FloatingActionButton(
-            child: const Icon(Icons.refresh),
-            backgroundColor: Colors.deepOrange,
-            onPressed: () async {
-              await getNearestStations(forceReload: true);
-            }),
+          backgroundColor: Colors.deepOrange,
+          onPressed: () async {
+            await getNearestStations(forceReload: true);
+          },
+          child: const Icon(Icons.refresh),
+        ),
         bottomNavigationBar: BottomNavigationBar(
+          currentIndex: tabIndex,
+          selectedItemColor: Colors.deepOrange,
+          onTap: _onItemTapped,
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.train_outlined),
@@ -214,9 +218,6 @@ class _MyAppState extends State<MyApp> {
               label: 'Bus',
             ),
           ],
-          currentIndex: tabIndex,
-          selectedItemColor: Colors.deepOrange,
-          onTap: _onItemTapped,
         ),
       ),
     );

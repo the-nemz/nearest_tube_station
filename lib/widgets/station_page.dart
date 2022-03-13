@@ -55,16 +55,16 @@ class _StationPageState extends State<StationPage> {
         Material(
           type: MaterialType.transparency,
           child: Container(
+            padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
+            decoration: BoxDecoration(
+                color: line.color,
+                borderRadius: const BorderRadius.all(Radius.circular(4))),
             child: Text(
               line.name,
               style: const TextStyle(
                 color: Colors.white,
               ),
             ),
-            padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
-            decoration: BoxDecoration(
-                color: line.color,
-                borderRadius: const BorderRadius.all(Radius.circular(4))),
           ),
         ),
       );
@@ -135,7 +135,12 @@ class _StationPageState extends State<StationPage> {
       ),
       Container(
         margin: const EdgeInsets.only(top: 16.0),
-        child: ArrivalsList(widget.station),
+        child: AnimatedSize(
+          curve: Curves.easeInOut,
+          duration: const Duration(milliseconds: 1000),
+          alignment: Alignment.topCenter,
+          child: ArrivalsList(widget.station),
+        ),
       ),
     ];
 

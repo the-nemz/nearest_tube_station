@@ -58,17 +58,17 @@ class _StationCardState extends State<StationCard> {
         Material(
           type: MaterialType.transparency,
           child: Container(
-            child: Text(
-              line.name,
-              style: const TextStyle(
-                color: Colors.white,
-              ),
-            ),
             padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
             decoration: BoxDecoration(
               color: line.color,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(4),
+              ),
+            ),
+            child: Text(
+              line.name,
+              style: const TextStyle(
+                color: Colors.white,
               ),
             ),
           ),
@@ -129,7 +129,12 @@ class _StationCardState extends State<StationCard> {
         ),
         ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 1000, minHeight: 0),
-          child: ArrivalsList(widget.station, 5),
+          child: AnimatedSize(
+            curve: Curves.easeInOut,
+            duration: const Duration(milliseconds: 500),
+            alignment: Alignment.topCenter,
+            child: ArrivalsList(widget.station, 5),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -175,6 +180,10 @@ class _StationCardState extends State<StationCard> {
 
     return Card(
       margin: EdgeInsets.fromLTRB(8, widget.index == 0 ? 0 : 16, 8, 8),
+      elevation: max(8 / (widget.index + 1), 1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Column(
@@ -183,10 +192,6 @@ class _StationCardState extends State<StationCard> {
           children: children,
         ),
       ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      elevation: max(8 / (widget.index + 1), 1),
     );
   }
 }

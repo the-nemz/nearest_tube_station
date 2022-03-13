@@ -7,25 +7,6 @@ import '../util.dart';
 import '../api/arrivals.dart';
 import '../api/nearest.dart';
 
-const modeToIcon = {
-  'national-rail': Image(
-    image: AssetImage('assets/nationalrail.png'),
-    width: 40,
-  ),
-  'overground': Image(
-    image: AssetImage('assets/overground.png'),
-    width: 40,
-  ),
-  'tube': Image(
-    image: AssetImage('assets/underground.png'),
-    width: 40,
-  ),
-  'bus': Image(
-    image: AssetImage('assets/buses.png'),
-    width: 40,
-  ),
-};
-
 class ArrivalsList extends StatefulWidget {
   final StationSummary station;
   final int count;
@@ -114,20 +95,20 @@ class _ArrivalsListState extends State<ArrivalsList> {
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           return ListView.separated(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            shrinkWrap: true,
             itemCount: widget.count != 0
                 ? widget.count
                 : arrivalsData?.arrivals
                         .where((a) => a.timeToStation < 1200)
                         .length ??
                     0,
+            separatorBuilder: (_, index) => const Divider(),
             itemBuilder: (_, index) {
               Arrival arrival = snapshot.data!.arrivals[index];
               return renderArrival(arrival);
             },
-            separatorBuilder: (_, index) => const Divider(),
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            shrinkWrap: true,
           );
         } else if (snapshot.hasError) {
           return Text('${snapshot.error}');
