@@ -82,7 +82,9 @@ class _StationCardState extends State<StationCard> {
   Widget build(BuildContext context) {
     Widget icon = modeToIcon[widget.station.lines.isNotEmpty
             ? widget.station.lines[0].mode
-            : widget.station.modes[0]] ??
+            : (widget.station.modes.isNotEmpty
+                ? widget.station.modes[0]
+                : '')] ??
         const Icon(Icons.directions_bus_filled_outlined, size: 40);
     List<Widget> children = [];
 
@@ -93,6 +95,7 @@ class _StationCardState extends State<StationCard> {
           child: SizedBox(
             height: 150,
             child: GoogleMap(
+              key: Key(widget.station.id),
               onMapCreated: _onMapCreated,
               myLocationEnabled: true,
               mapToolbarEnabled: false,

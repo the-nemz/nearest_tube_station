@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -99,7 +100,7 @@ class _ArrivalsListState extends State<ArrivalsList> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             shrinkWrap: true,
             itemCount: widget.count != 0
-                ? widget.count
+                ? (min(widget.count, arrivalsData?.arrivals.length ?? 0))
                 : arrivalsData?.arrivals
                         .where((a) => a.timeToStation < 1200)
                         .length ??

@@ -11,6 +11,10 @@ import 'widgets/station_page.dart';
 
 const railStoptypes = 'NaptanMetroStation,NaptanRailStation';
 const busStoptypes = 'NaptanPublicBusCoachTram';
+
+const railRadius = 2000;
+const busRadius = 1000;
+
 void main() {
   runApp(const MaterialApp(
     title: 'Tube Near Me',
@@ -28,7 +32,10 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   Position? currentLocation;
   String stopTypes = railStoptypes;
+  int searchRadius = railRadius;
   NearestStationResponse? nearestData;
+  NearestStationResponse? nearestRailData;
+  NearestStationResponse? nearestBusData;
   String nearestQuery = '';
   int tabIndex = 0;
   int numShown = 0;
@@ -36,15 +43,35 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    determinePosition();
 
-    const period = Duration(milliseconds: 250);
-    Timer.periodic(period, (Timer t) {
-      if (numShown < (nearestData?.stations.length ?? 0)) {
-        setState(() {
-          numShown = numShown + 1;
+    determinePosition().then((_) {
+      getNearestStations().then((_) {
+        const period = Duration(milliseconds: 250);
+        Timer.periodic(period, (Timer t) {
+          if (numShown < (nearestData?.stations.length ?? 0)) {
+            setState(() {
+              numShown = numShown + 1;
+            });
+          }
         });
-      }
+      });
+
+      Geolocator.getPositionStream().listen((Position? position) {
+        if (position != null) {
+          double distance = Geolocator.distanceBetween(
+              position.latitude,
+              position.longitude,
+              currentLocation?.latitude ?? 0,
+              currentLocation?.longitude ?? 0);
+          if (distance > 100) {
+            setState(() {
+              currentLocation = position;
+            });
+
+            getNearestStations();
+          }
+        }
+      });
     });
   }
 
@@ -54,9 +81,8 @@ class _MyAppState extends State<MyApp> {
     determinePosition();
   }
 
-  void fetchNearestStations(String query) async {
+  Future<void> fetchNearestStations(String query) async {
     setState(() {
-      nearestData = null;
       numShown = 0;
     });
 
@@ -67,11 +93,17 @@ class _MyAppState extends State<MyApp> {
       final data = NearestStationResponse.fromJson(jsonDecode(response.body));
 
       setState(() {
+        if (tabIndex == 0) {
+          nearestRailData = data;
+        } else if (tabIndex == 1) {
+          nearestBusData = data;
+        }
+
         nearestData = data;
         nearestQuery = query;
+        numShown = 1;
       });
     } else {
-      // TODO: handle this so as to not send tons of repeated erroring requests
       print('${response.statusCode} - ${response.reasonPhrase}');
       throw Exception('Failed to load nearest stations');
     }
@@ -83,10 +115,16 @@ class _MyAppState extends State<MyApp> {
     }
 
     String query =
-        'https://api.tfl.gov.uk/StopPoint/?lat=${currentLocation!.latitude}&lon=${currentLocation!.longitude}&stopTypes=$stopTypes&radius=2000';
+        'https://api.tfl.gov.uk/StopPoint/?lat=${currentLocation!.latitude}&lon=${currentLocation!.longitude}&stopTypes=$stopTypes&radius=$searchRadius';
 
     if (nearestQuery != query || nearestData == null || forceReload) {
-      fetchNearestStations(query);
+      if (forceReload) {
+        setState(() {
+          nearestData = null;
+        });
+      }
+
+      await fetchNearestStations(query);
     }
   }
 
@@ -94,7 +132,7 @@ class _MyAppState extends State<MyApp> {
   ///
   /// When the location services are not enabled or permissions
   /// are denied the `Future` will return an error.
-  void determinePosition() async {
+  Future determinePosition() async {
     bool serviceEnabled;
     LocationPermission permission;
 
@@ -134,47 +172,46 @@ class _MyAppState extends State<MyApp> {
     setState(() {
       currentLocation = pos;
     });
-
-    Geolocator.getPositionStream().listen((Position? position) {
-      if (position != null) {
-        double distance = Geolocator.distanceBetween(
-            position.latitude,
-            position.longitude,
-            currentLocation?.latitude ?? 0,
-            currentLocation?.longitude ?? 0);
-        if (distance > 100) {
-          setState(() {
-            currentLocation = position;
-          });
-        }
-      }
-    });
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      if (index == 0 && stopTypes != railStoptypes) {
+    if (index != tabIndex) {
+      setState(() {
+        nearestData = null;
+      });
+
+      if (index == 0) {
         setState(() {
           stopTypes = railStoptypes;
-          tabIndex = index;
+          searchRadius = railRadius;
+          nearestData = nearestRailData;
+          tabIndex = 0;
         });
-      } else if (index == 1 && stopTypes != busStoptypes) {
+
+        if (nearestRailData == null) {
+          getNearestStations();
+        }
+      } else if (index == 1) {
         setState(() {
           stopTypes = busStoptypes;
-          tabIndex = index;
+          searchRadius = busRadius;
+          nearestData = nearestBusData;
+          tabIndex = 1;
         });
+
+        if (nearestBusData == null) {
+          getNearestStations();
+        }
       }
-    });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    getNearestStations();
-
     return MaterialApp(
       home: Scaffold(
         body: Center(
-          child: nearestData != null
+          child: nearestData?.stations.isNotEmpty ?? false
               ? ListView.builder(
                   itemCount: nearestData?.stations.length ?? 0,
                   itemBuilder: (_, index) {
@@ -195,12 +232,16 @@ class _MyAppState extends State<MyApp> {
                       ),
                     );
                   })
-              : const CircularProgressIndicator(),
+              : nearestData != null
+                  ? const Text('There are no stations nearby.')
+                  : const CircularProgressIndicator(),
         ),
         floatingActionButton: FloatingActionButton(
           backgroundColor: Colors.deepOrange,
-          onPressed: () async {
-            await getNearestStations(forceReload: true);
+          onPressed: () {
+            determinePosition().then((_) {
+              getNearestStations(forceReload: true);
+            });
           },
           child: const Icon(Icons.refresh),
         ),
