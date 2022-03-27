@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../api/nearest.dart';
@@ -25,8 +26,9 @@ const modeToIcon = {
 
 class StationPage extends StatefulWidget {
   final StationSummary station;
+  final Position? currentLocation;
 
-  const StationPage(this.station);
+  const StationPage(this.station, this.currentLocation);
 
   @override
   _StationPageState createState() => _StationPageState();
@@ -40,11 +42,20 @@ class _StationPageState extends State<StationPage> {
     super.initState();
   }
 
-  void _onMapCreated(GoogleMapController controller) {
+  void _onMapCreated(GoogleMapController controller) async {
+    controller.setMapStyle(
+        '[{"featureType": "poi", "stylers": [{"visibility": "off"}]}]');
+
+    // zoom out of station coordinate until current locatioon is visible on the map
+    while (widget.currentLocation != null &&
+        !(await controller.getVisibleRegion()).contains(LatLng(
+            widget.currentLocation!.latitude,
+            widget.currentLocation!.longitude))) {
+      await controller.animateCamera(CameraUpdate.zoomOut());
+    }
+
     setState(() {
       mapController = controller;
-      controller.setMapStyle(
-          '[{"featureType": "poi", "stylers": [{"visibility": "off"}]}]');
     });
   }
 
@@ -87,16 +98,17 @@ class _StationPageState extends State<StationPage> {
           child: GoogleMap(
             onMapCreated: _onMapCreated,
             myLocationEnabled: true,
+            compassEnabled: true,
             mapToolbarEnabled: false,
-            rotateGesturesEnabled: false,
-            scrollGesturesEnabled: false,
+            rotateGesturesEnabled: true,
+            scrollGesturesEnabled: true,
             zoomControlsEnabled: false,
-            zoomGesturesEnabled: false,
+            zoomGesturesEnabled: true,
             tiltGesturesEnabled: false,
             myLocationButtonEnabled: false,
             initialCameraPosition: CameraPosition(
               target: LatLng(widget.station.latitude, widget.station.longitude),
-              zoom: 14,
+              zoom: 16,
             ),
             markers: <Marker>{
               Marker(

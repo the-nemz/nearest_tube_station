@@ -224,11 +224,14 @@ class _MyAppState extends State<MyApp> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) =>
-                                    StationPage(nearestData!.stations[index])),
+                              builder: (context) => StationPage(
+                                  nearestData!.stations[index],
+                                  currentLocation),
+                            ),
                           );
                         },
-                        child: StationCard(nearestData!.stations[index], index),
+                        child: StationCard(nearestData!.stations[index], index,
+                            currentLocation),
                       ),
                     );
                   })

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../api/nearest.dart';
@@ -28,8 +29,9 @@ const modeToIcon = {
 class StationCard extends StatefulWidget {
   final StationSummary station;
   final int index;
+  final Position? currentLocation;
 
-  const StationCard(this.station, this.index);
+  const StationCard(this.station, this.index, this.currentLocation);
 
   @override
   _StationCardState createState() => _StationCardState();
@@ -43,11 +45,20 @@ class _StationCardState extends State<StationCard> {
     super.initState();
   }
 
-  void _onMapCreated(GoogleMapController controller) {
+  void _onMapCreated(GoogleMapController controller) async {
+    controller.setMapStyle(
+        '[{"featureType": "poi", "stylers": [{"visibility": "off"}]}]');
+
+    // zoom out of station coordinate until current locatioon is visible on the map
+    while (widget.currentLocation != null &&
+        !(await controller.getVisibleRegion()).contains(LatLng(
+            widget.currentLocation!.latitude,
+            widget.currentLocation!.longitude))) {
+      await controller.animateCamera(CameraUpdate.zoomOut());
+    }
+
     setState(() {
       mapController = controller;
-      controller.setMapStyle(
-          '[{"featureType": "poi", "stylers": [{"visibility": "off"}]}]');
     });
   }
 
@@ -98,6 +109,7 @@ class _StationCardState extends State<StationCard> {
               key: Key(widget.station.id),
               onMapCreated: _onMapCreated,
               myLocationEnabled: true,
+              compassEnabled: true,
               mapToolbarEnabled: false,
               rotateGesturesEnabled: false,
               scrollGesturesEnabled: false,
@@ -108,7 +120,7 @@ class _StationCardState extends State<StationCard> {
               initialCameraPosition: CameraPosition(
                 target:
                     LatLng(widget.station.latitude, widget.station.longitude),
-                zoom: 14,
+                zoom: 16,
               ),
               markers: <Marker>{
                 Marker(
