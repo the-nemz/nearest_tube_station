@@ -3,11 +3,13 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:sliding_up_panel/sliding_up_panel.dart';
 
 import 'api/nearest.dart';
-import 'widgets/station_card.dart';
-import 'widgets/station_page.dart';
+import 'widgets/location_map.dart';
+import 'widgets/results_panel.dart';
 
 const railStoptypes = 'NaptanMetroStation,NaptanRailStation';
 const busStoptypes = 'NaptanPublicBusCoachTram';
@@ -210,34 +212,24 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        body: Center(
-          child: nearestData?.stations.isNotEmpty ?? false
-              ? ListView.builder(
-                  itemCount: nearestData?.stations.length ?? 0,
-                  itemBuilder: (_, index) {
-                    return AnimatedOpacity(
-                      opacity: index < numShown ? 1.0 : 0.0,
-                      curve: Curves.easeInOut,
-                      duration: const Duration(milliseconds: 500),
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => StationPage(
-                                  nearestData!.stations[index],
-                                  currentLocation),
-                            ),
-                          );
-                        },
-                        child: StationCard(nearestData!.stations[index], index,
-                            currentLocation),
-                      ),
-                    );
-                  })
-              : nearestData != null
-                  ? const Text('There are no stations nearby.')
-                  : const CircularProgressIndicator(),
+        body: SlidingUpPanel(
+          parallaxEnabled: true,
+          parallaxOffset: 0.5,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          panelBuilder: (controller) =>
+              ResultsPanel(controller, nearestData, numShown, currentLocation),
+          body: LocationMap(
+            const CameraPosition(
+              // TODO: fix current location
+              // target: LatLng(currentLocation?.latitude ?? 0,
+              //     currentLocation?.longitude ?? 0),
+              target: LatLng(51.493, -0.123),
+              zoom: 13,
+            ),
+            // TODO: add pins to map
+            const <Marker>{},
+            currentLocation,
+          ),
         ),
         floatingActionButton: FloatingActionButton(
           backgroundColor: Colors.deepOrange,

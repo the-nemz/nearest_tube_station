@@ -3,7 +3,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../api/nearest.dart';
-import '../widgets/arrivals_list.dart';
+import 'arrivals_list.dart';
+import 'location_map.dart';
 
 const modeToIcon = {
   'national-rail': Image(
@@ -95,28 +96,19 @@ class _StationPageState extends State<StationPage> {
         tag: '${widget.station.id}-map',
         child: SizedBox(
           height: 300,
-          child: GoogleMap(
-            onMapCreated: _onMapCreated,
-            myLocationEnabled: true,
-            compassEnabled: true,
-            mapToolbarEnabled: false,
-            rotateGesturesEnabled: true,
-            scrollGesturesEnabled: true,
-            zoomControlsEnabled: false,
-            zoomGesturesEnabled: true,
-            tiltGesturesEnabled: false,
-            myLocationButtonEnabled: false,
-            initialCameraPosition: CameraPosition(
+          child: LocationMap(
+            CameraPosition(
               target: LatLng(widget.station.latitude, widget.station.longitude),
               zoom: 16,
             ),
-            markers: <Marker>{
+            <Marker>{
               Marker(
                 markerId: MarkerId(widget.station.id),
                 position:
                     LatLng(widget.station.latitude, widget.station.longitude),
               ),
             },
+            widget.currentLocation,
           ),
         ),
       ),
